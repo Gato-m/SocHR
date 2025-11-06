@@ -1,13 +1,18 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { router } from 'expo-router';
 import React from 'react';
-import { Button, StyleSheet, Text, View } from 'react-native';
+import { Button, Text, View } from 'react-native';
 
 export default function OnboardingScreen() {
+  const finishOnboarding = async () => {
+    await AsyncStorage.setItem('hasOnboarded', 'true');
+    router.replace('/(tabs)');
+  };
+
   return (
     <View>
-      <Text>OnboardingScreen</Text>
-      <Button title="Sākt lietot" onPress={() => navigation.replace('MainTabs')} />
+      <Text>Onboarding Screen</Text>
+      <Button title="Sākt lietot" onPress={finishOnboarding} />
     </View>
   );
 }
-
-const styles = StyleSheet.create({});
