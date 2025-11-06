@@ -3,19 +3,20 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Text, View } from 'react-native';
+import SocLogo from '../assets/images/SocLogo';
 
 export default function SplashScreen() {
   useEffect(() => {
     const checkOnboarding = async () => {
       const hasOnboarded = await AsyncStorage.getItem('hasOnboarded');
-  console.log('SplashScreen: hasOnboarded =', hasOnboarded);
+      console.log('SplashScreen: hasOnboarded =', hasOnboarded);
       setTimeout(() => {
         if (hasOnboarded === 'true') {
-          router.replace('/(tabs)');
+          router.replace('/onboarding');
         } else {
           router.replace('/onboarding');
         }
-      }, 3000); // 3 sekundes
+      }, 2000); // 3 sekundes
     };
 
     checkOnboarding();
@@ -23,7 +24,8 @@ export default function SplashScreen() {
 
   return (
     <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-      <Text style={{ fontSize: 24 }}>Laipni lūdzam!</Text>
+      <SocLogo size={90} />
+      <Text style={{ fontSize: 24, fontWeight: 'bold', marginTop: 20 }}>Laipni lūdzam!</Text>
     </View>
   );
 }
