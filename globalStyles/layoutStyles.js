@@ -10,7 +10,16 @@ export const flexPatterns = StyleSheet.create({
   column: {
     flexDirection: 'column',
   },
+  textCenter: {
+    textAlign: 'center',
+  },
   center: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  centered: {
+    flexDirection: 'column',
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
