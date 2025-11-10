@@ -49,116 +49,6 @@ export default function OnboardingScreen() {
     router.replace('/(tabs)');
   };
 
-  const renderItem = ({ item, index }: { item: (typeof slides)[number]; index: number }) => {
-    const inputRange = [(index - 1) * width, index * width, (index + 1) * width];
-    const scale = scrollX.current.interpolate({
-      inputRange,
-      outputRange: [0.9, 1, 0.9],
-      extrapolate: 'clamp',
-    });
-    const opacity = scrollX.current.interpolate({
-      inputRange,
-      outputRange: [0.6, 1, 0.6],
-      extrapolate: 'clamp',
-    });
-
-    return (
-      <View style={[styles.slide, { width }]}>
-        <Animated.Image
-          source={item.image}
-          style={[styles.image, { transform: [{ scale }], opacity }]}
-          resizeMode="contain"
-        />
-
-        {/* Controls + dots + text all inside the slide, centered vertically */}
-        <View style={styles.slideControlsWrapper}>
-          <View style={styles.controlsRowInline}>
-            {index > 0 ? (
-              <Pressable
-                onPress={() => flatListRef.current?.scrollToIndex({ index: index - 1 })}
-                style={styles.controlButton}
-              >
-                <Text style={styles.controlIcon} accessibilityLabel="Back">
-                  ‹
-                </Text>
-              </Pressable>
-            ) : (
-              <View style={styles.controlPlaceholder} />
-            )}
-
-            <View style={styles.pagination}>
-              {slides.map((_, i) => {
-                const dotInput = [(i - 1) * width, i * width, (i + 1) * width];
-                const dotWidth = scrollX.current.interpolate({
-                  inputRange: dotInput,
-                  outputRange: [8, 24, 8],
-                  extrapolate: 'clamp',
-                });
-                const dotRadius = scrollX.current.interpolate({
-                  inputRange: dotInput,
-                  outputRange: [4, 8, 4],
-                  extrapolate: 'clamp',
-                });
-                return (
-                  <Animated.View
-                    key={i}
-                    style={[
-                      styles.dot,
-                      {
-                        width: dotWidth,
-                        borderRadius: dotRadius,
-                        backgroundColor: i === index ? COLORS.primary : COLORS.gray,
-                      },
-                    ]}
-                  />
-                );
-              })}
-            </View>
-
-            {index < slides.length - 1 ? (
-              <Pressable
-                onPress={() => flatListRef.current?.scrollToIndex({ index: index + 1 })}
-                style={styles.controlButton}
-              >
-                <Text style={styles.controlIcon} accessibilityLabel="Next">
-                  ›
-                </Text>
-              </Pressable>
-            ) : (
-              <View style={styles.controlPlaceholder} />
-            )}
-          </View>
-
-          <View style={styles.textContainerInline}>
-            {item.lines.map((line, idx) => (
-              <Body key={idx} variant={idx === 0 ? 'primary' : 'secondary'} style={styles.lineText}>
-                {line}
-              </Body>
-            ))}
-          </View>
-
-          {index === slides.length - 1 && (
-            <Pressable onPress={finishOnboarding} style={styles.ienaktButton}>
-              <Text style={styles.ienaktText}>Ienākt</Text>
-            </Pressable>
-          )}
-        </View>
-      </View>
-    );
-  };
-
-  const goToNext = () => {
-    if (currentIndex < slides.length - 1) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex + 1 });
-    }
-  };
-
-  const goToPrev = () => {
-    if (currentIndex > 0) {
-      flatListRef.current?.scrollToIndex({ index: currentIndex - 1 });
-    }
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <Pressable
@@ -167,68 +57,182 @@ export default function OnboardingScreen() {
       >
         <Text style={styles.skipTopText}>Izlaist</Text>
       </Pressable>
-      <FlatList
-        ref={flatListRef}
-        data={slides}
-        horizontal
-        pagingEnabled
-        showsHorizontalScrollIndicator={false}
-        keyExtractor={(item) => item.key}
-        renderItem={renderItem}
-        onViewableItemsChanged={onViewRef.current}
-        viewabilityConfig={viewConfigRef.current}
-        onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX.current } } }], {
-          useNativeDriver: false,
-        })}
-        scrollEventThrottle={16}
-      />
 
-      {/* Footer removed - controls, dots, text and Ienākt are now inside each slide */}
+      <View style={styles.mainContainer}>
+        <View style={styles.topSection}>
+          <FlatList
+            ref={flatListRef}
+            data={slides}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.key}
+            renderItem={({ item, index }) => (
+              <View style={[styles.imageSlide, { width }]}>
+                <View style={styles.imageContainer}>
+                  <Animated.Image
+                    source={item.image}
+                    style={[
+                      styles.image,
+                      {
+                        transform: [
+                          {
+                            scale: scrollX.current.interpolate({
+                              inputRange: [(index - 1) * width, index * width, (index + 1) * width],
+                              outputRange: [0.9, 1, 0.9],
+                              extrapolate: 'clamp',
+                            }),
+                          },
+                        ],
+                        opacity: scrollX.current.interpolate({
+                          inputRange: [(index - 1) * width, index * width, (index + 1) * width],
+                          outputRange: [0.6, 1, 0.6],
+                          extrapolate: 'clamp',
+                        }),
+                      },
+                    ]}
+                    resizeMode="contain"
+                  />
+                </View>
+              </View>
+            )}
+            onViewableItemsChanged={onViewRef.current}
+            viewabilityConfig={viewConfigRef.current}
+            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX.current } } }], {
+              useNativeDriver: false,
+            })}
+            scrollEventThrottle={16}
+          />
+        </View>
+
+        <View style={styles.paginationFixed}>
+          {slides.map((_, i) => {
+            const dotWidth = scrollX.current.interpolate({
+              inputRange: [(i - 1) * width, i * width, (i + 1) * width],
+              outputRange: [8, 24, 8],
+              extrapolate: 'clamp',
+            });
+            const dotRadius = scrollX.current.interpolate({
+              inputRange: [(i - 1) * width, i * width, (i + 1) * width],
+              outputRange: [4, 8, 4],
+              extrapolate: 'clamp',
+            });
+            return (
+              <Animated.View
+                key={i}
+                style={[
+                  styles.dot,
+                  {
+                    width: dotWidth,
+                    borderRadius: dotRadius,
+                    backgroundColor: i === currentIndex ? COLORS.primary : COLORS.gray,
+                  },
+                ]}
+              />
+            );
+          })}
+        </View>
+
+        <View style={styles.bottomSection}>
+          <FlatList
+            data={slides}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            keyExtractor={(item) => item.key}
+            renderItem={({ item, index }) => (
+              <View style={[styles.textSlide, { width }]}>
+                <View style={styles.textContainerInline}>
+                  {item.lines.map((line: string, idx: number) => (
+                    <Body
+                      key={idx}
+                      variant={idx === 0 ? 'primary' : 'secondary'}
+                      style={styles.lineText}
+                    >
+                      {line}
+                    </Body>
+                  ))}
+                </View>
+                {index === slides.length - 1 && (
+                  <Pressable onPress={finishOnboarding} style={styles.ienaktButton}>
+                    <Text style={styles.ienaktText}>Ienākt</Text>
+                  </Pressable>
+                )}
+              </View>
+            )}
+            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX.current } } }], {
+              useNativeDriver: false,
+            })}
+            scrollEventThrottle={16}
+          />
+        </View>
+      </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
+  // Layout
   container: {
     flex: 1,
     backgroundColor: '#fff',
   },
-  slide: {
+  mainContainer: {
+    flex: 1,
+    flexDirection: 'column',
+    marginTop: '40%',
+  },
+  topSection: {
+    height: 350,
+  },
+  bottomSection: {
+    flex: 1,
+  },
+
+  // Image Section
+  imageSlide: {
+    height: 350,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageContainer: {
+    width: '100%',
+    height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
-    flex: 1,
   },
   image: {
     width: '60%',
-    height: '60%',
+    height: 300,
   },
-  footer: {
-    paddingHorizontal: SPACING.lg,
-    paddingTop: SPACING.sm,
-    alignItems: 'center',
-  },
-  pagination: {
+
+  // Pagination
+  paginationFixed: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: SPACING.xs,
+    height: 24,
+    paddingVertical: SPACING.md,
+    backgroundColor: '#fff',
   },
   dot: {
+    height: 8,
     width: 8,
-    height: 8,
     borderRadius: 4,
-    backgroundColor: '#ccc',
     marginHorizontal: 4,
+    backgroundColor: COLORS.gray,
   },
-  dotActive: {
-    width: 24,
-    height: 8,
-    borderRadius: 8,
-    backgroundColor: '#333',
-  },
-  textContainer: {
+
+  // Text Section
+  textSlide: {
+    flex: 1,
     alignItems: 'center',
-    marginBottom: 16,
+    paddingHorizontal: SPACING.md,
+  },
+  textContainerInline: {
+    alignItems: 'center',
+    marginBottom: SPACING.sm,
+    paddingHorizontal: SPACING.md,
   },
   lineText: {
     fontSize: TYPOGRAPHY.md,
@@ -236,89 +240,8 @@ const styles = StyleSheet.create({
     marginVertical: SPACING.xs,
     textAlign: 'center',
   },
-  button: {
-    backgroundColor: '#0a84ff',
-    paddingVertical: 12,
-    paddingHorizontal: 36,
-    borderRadius: 8,
-    marginBottom: 24,
-  },
-  buttonText: {
-    color: '#fff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  spacer: {
-    height: 56,
-    marginBottom: 24,
-  },
-  controlsRow: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: SPACING.xs,
-  },
-  controlButton: {
-    paddingVertical: 0,
-    paddingHorizontal: SPACING.sm,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  controlText: {
-    color: COLORS.text,
-    fontSize: TYPOGRAPHY.md,
-  },
-  controlPlaceholder: {
-    width: 24,
-  },
-  slideControlsWrapper: {
-    width: '100%',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: SPACING.md,
-  },
-  controlsRowInline: {
-    width: '100%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: SPACING.sm,
-  },
-  textContainerInline: {
-    alignItems: 'center',
-    marginBottom: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-  },
-  controlIcon: {
-    fontSize: 30,
-    lineHeight: 30,
-    color: COLORS.text,
-    paddingHorizontal: SPACING.xs,
-    textAlign: 'center',
-  },
-  controlButtonPrimary: {
-    backgroundColor: COLORS.primary,
-    paddingVertical: SPACING.sm,
-    paddingHorizontal: SPACING.md,
-    borderRadius: 8,
-  },
-  controlTextPrimary: {
-    color: COLORS.white,
-    fontWeight: '600',
-  },
-  footerRow: {
-    width: '100%',
-    alignItems: 'flex-end',
-  },
-  skipButton: {
-    paddingVertical: SPACING.xs,
-    paddingHorizontal: SPACING.sm,
-  },
-  skipText: {
-    color: COLORS.gray,
-    fontSize: TYPOGRAPHY.md,
-  },
+
+  // Buttons
   skipTopButton: {
     position: 'absolute',
     top: SPACING.sm,
