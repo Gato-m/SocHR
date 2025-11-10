@@ -18,8 +18,8 @@ export const flexPatterns = StyleSheet.create({
     alignItems: 'center',
   },
   centered: {
-    flexDirection: 'column',
-    flex: 1,
+    // flexDirection: 'column',
+    // flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },

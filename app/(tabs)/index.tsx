@@ -1,55 +1,46 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { BORDERRADIUS, COLORS, SPACING, TYPOGRAPHY, flexPatterns } from '../../globalStyles';
+import { Body, Caption, COLORS, flexPatterns, Title, TYPOGRAPHY } from '../../globalStyles/index';
+
 export default function index() {
   return (
     <SafeAreaView
-      style={[
-        { borderRadius: BORDERRADIUS.md },
-        flexPatterns.centered,
-        { backgroundColor: COLORS.background },
-      ]}
+      style={[flexPatterns.centered, { height: '100%' }, { backgroundColor: COLORS.komandejums }]}
     >
-      <View>
-        <Text
-          style={[
-            { margin: SPACING.xl },
-            flexPatterns.textCenter,
-            { color: COLORS.text },
-            { fontSize: TYPOGRAPHY.md },
-          ]}
-        >
-          Prombutne
-        </Text>
-        <Text
-          style={[
-            { margin: SPACING.xl },
-            flexPatterns.textCenter,
-            { color: COLORS.text },
-            { fontSize: TYPOGRAPHY.xl, fontWeight: 'bold' },
-          ]}
-        >
-          Prombutne
-        </Text>
-        <Text
-          style={[
-            { margin: SPACING.xl },
-            { color: COLORS.text },
-            flexPatterns.textCenter,
-            { fontSize: TYPOGRAPHY.sm },
-          ]}
-        >
-          Prombutne
-        </Text>
+      <View
+        style={[
+          flexPatterns.center,
+          flexPatterns.flex1,
+          { paddingHorizontal: TYPOGRAPHY.lg },
+          { backgroundColor: COLORS.iislaiciigs },
+        ]}
+      >
+        <Title>Title Prombutne</Title>
+        <Body variant="secondary" style={[{ paddingVertical: TYPOGRAPHY.md }]}>
+          Body Prombutne
+        </Body>
+        <Caption>Caption Prombutne</Caption>
       </View>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  title: {
-    color: 'red',
-    fontSize: 20,
-  },
+  // container: {
+  //   height: '100%',
+  //   padding: TYPOGRAPHY.md,
+  //   justifyContent: 'center',
+  //   alignItems: 'center',
+  //   // backgroundColor: COLORS.borderColorGray,
+  // },
+  // title: {
+  //   fontSize: TYPOGRAPHY.xl,
+  //   color: COLORS.text,
+  // },
+  // body: {
+  //   fontSize: TYPOGRAPHY.lg,
+  //   paddingVertical: TYPOGRAPHY.md,
+  //   color: COLORS.primary,
+  // },
 });

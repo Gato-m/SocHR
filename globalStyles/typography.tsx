@@ -1,6 +1,6 @@
 // globalStyles/Typography.js
-import { StyleSheet, Text } from 'react-native';
 import type { TextProps, TextStyle } from 'react-native';
+import { StyleSheet, Text } from 'react-native';
 import { COLORS, TYPOGRAPHY } from './theme';
 
 type Variant = 'primary' | 'secondary';
@@ -36,6 +36,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: TYPOGRAPHY.xl,
     color: COLORS.text,
+    fontWeight: 'bold',
   },
   body: {
     fontSize: TYPOGRAPHY.md,
@@ -44,7 +45,7 @@ const styles = StyleSheet.create({
     color: COLORS.text,
   },
   secondary: {
-    color: COLORS.text,
+    color: COLORS.white,
   },
   caption: {
     fontSize: TYPOGRAPHY.sm,

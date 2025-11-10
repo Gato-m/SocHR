@@ -42,6 +42,8 @@ export const COLORS = {
   backgroundLite: '#f5f5f5',
   backgroundLiteBorder: '#ecebebff',
   borderColorGray: '#d7d7d7',
+  gray: '#9a9a9aff',
+  white: '#FFFFFF',
   text: '#333333',
   slimiba: '#FF3B30',
   atvalinajums: '#6fde43',
