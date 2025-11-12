@@ -1,17 +1,36 @@
-import { createClient } from '@supabase/supabase-js';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { createClient, processLock } from '@supabase/supabase-js';
+import { AppState, Platform } from 'react-native';
+import 'react-native-url-polyfill/auto';
 
-// Configure these via your environment (app.json / app.config.js or runtime secrets)
-const SUPABASE_URL = process.env.SUPABASE_URL || '';
-const SUPABASE_ANON_KEY = process.env.SUPABASE_ANON_KEY || '';
+const supabaseUrl = process;
+const supabaseAnonKey = process.env.SUPABASE_ANON_KEY;
 
-if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-  // Keep this a console warning rather than throwing so the app can still start in dev.
-  // The developer should provide these values in their environment before fetching data.
-  // Example: SUPABASE_URL and SUPABASE_ANON_KEY in process.env or use Expo secrets.
-  // eslint-disable-next-line no-console
-  console.warn(
-    'Supabase URL or ANON KEY not provided. Set SUPABASE_URL and SUPABASE_ANON_KEY in env.'
-  );
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error('Missing Supabase URL or Anon Key');
 }
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    ...(Platform.OS !== 'web' ? { storage: AsyncStorage } : {}),
+    autoRefreshToken: true,
+    persistSession: true,
+    detectSessionInUrl: false,
+    lock: processLock,
+  },
+});
+
+// Tells Supabase Auth to continuously refresh the session automatically
+// if the app is in the foreground. When this is added, you will continue
+// to receive `onAuthStateChange` events with the `TOKEN_REFRESHED` or
+// `SIGNED_OUT` event if the user's session is terminated. This should
+// only be registered once.
+if (Platform.OS !== 'web') {
+  AppState.addEventListener('change', (state) => {
+    if (state === 'active') {
+      supabase.auth.startAutoRefresh();
+    } else {
+      supabase.auth.stopAutoRefresh();
+    }
+  });
+}
