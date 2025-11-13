@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
 import {
   ActivityIndicator,
   FlatList,
@@ -188,13 +189,23 @@ export default function Personal() {
     return publicUrl;
   }, []); // Close useCallback with empty dependency array
 
+  const router = useRouter();
+
+  const handleUserPress = (userId: string) => {
+    router.push(`/profile/${userId}`);
+  };
+
   const renderUserItem = useCallback(
     ({ item }: { item: User }) => {
       console.log('Rendering user:', item.name, 'Avatar path:', item.avatar);
       const avatarUrl = getAvatarUrl(item.avatar);
 
       return (
-        <View style={styles.userCard}>
+        <TouchableOpacity 
+          style={styles.userCard}
+          onPress={() => handleUserPress(item.id)}
+          activeOpacity={0.8}
+        >
           <View style={styles.avatarContainer}>
             {avatarUrl ? (
               <Image
@@ -229,7 +240,10 @@ export default function Personal() {
 
           <TouchableOpacity
             style={styles.phoneButton}
-            onPress={() => handlePhonePress(item.phone)}
+            onPress={(e) => {
+              e.stopPropagation();
+              if (item.phone) handlePhonePress(item.phone);
+            }}
             disabled={!item.phone}
           >
             <Ionicons
@@ -238,11 +252,11 @@ export default function Personal() {
               color={item.phone ? COLORS.primary : COLORS.gray}
             />
           </TouchableOpacity>
-        </View>
+        </TouchableOpacity>
       );
     },
-    [getAvatarUrl, handlePhonePress]
-  ); // Add dependencies here
+    [getAvatarUrl, handlePhonePress, handleUserPress]
+  );
 
   const styles = StyleSheet.create({
     container: {
