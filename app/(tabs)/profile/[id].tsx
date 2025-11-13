@@ -413,6 +413,7 @@ const styles = StyleSheet.create({
     marginBottom: SPACING.md,
   },
   avatar: {
+    marginTop: -8,
     width: 140,
     height: 140,
     borderRadius: 30,

@@ -1,6 +1,8 @@
 import { FontAwesome } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
 import React from 'react';
+import { View } from 'react-native';
+import Soclogo from '../../Components/soclogo';
 
 export default function TabsLayout() {
   return (
@@ -12,6 +14,11 @@ export default function TabsLayout() {
         tabBarStyle: {
           paddingTop: 5,
         },
+        headerRight: () => (
+          <View style={{ marginRight: 16 }}>
+            <Soclogo style={{ width: 40, height: 40 }} />
+          </View>
+        ),
       }}
     >
       <Tabs.Screen
