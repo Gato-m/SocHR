@@ -65,8 +65,12 @@ export default function OnboardingScreen() {
             data={slides}
             horizontal
             pagingEnabled
+            snapToInterval={width}
+            snapToAlignment="center"
+            decelerationRate="fast"
             showsHorizontalScrollIndicator={false}
             keyExtractor={(item) => item.key}
+            contentContainerStyle={styles.listContent}
             renderItem={({ item, index }) => (
               <View style={[styles.imageSlide, { width }]}>
                 <View style={styles.imageContainer}>
@@ -79,7 +83,7 @@ export default function OnboardingScreen() {
                           {
                             scale: scrollX.current.interpolate({
                               inputRange: [(index - 1) * width, index * width, (index + 1) * width],
-                              outputRange: [0.9, 1, 0.9],
+                              outputRange: [0.5, 1, 0.5],
                               extrapolate: 'clamp',
                             }),
                           },
@@ -100,6 +104,13 @@ export default function OnboardingScreen() {
             viewabilityConfig={viewConfigRef.current}
             onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX.current } } }], {
               useNativeDriver: false,
+              listener: (event: any) => {
+                // Update the current index based on scroll position
+                const newIndex = Math.round(event.nativeEvent.contentOffset.x / width);
+                if (newIndex !== currentIndex) {
+                  setCurrentIndex(newIndex);
+                }
+              },
             })}
             scrollEventThrottle={16}
           />
@@ -134,37 +145,24 @@ export default function OnboardingScreen() {
         </View>
 
         <View style={styles.bottomSection}>
-          <FlatList
-            data={slides}
-            horizontal
-            pagingEnabled
-            showsHorizontalScrollIndicator={false}
-            keyExtractor={(item) => item.key}
-            renderItem={({ item, index }) => (
-              <View style={[styles.textSlide, { width }]}>
-                <View style={styles.textContainerInline}>
-                  {item.lines.map((line: string, idx: number) => (
-                    <Body
-                      key={idx}
-                      variant={idx === 0 ? 'primary' : 'secondary'}
-                      style={styles.lineText}
-                    >
-                      {line}
-                    </Body>
-                  ))}
-                </View>
-                {index === slides.length - 1 && (
-                  <Pressable onPress={finishOnboarding} style={styles.ienaktButton}>
-                    <Text style={styles.ienaktText}>Ienākt</Text>
-                  </Pressable>
-                )}
-              </View>
+          <View style={[styles.textSlide, { width }]}>
+            <View style={styles.textContainerInline}>
+              {slides[currentIndex].lines.map((line: string, idx: number) => (
+                <Body
+                  key={idx}
+                  variant={idx === 0 ? 'primary' : 'secondary'}
+                  style={styles.lineText}
+                >
+                  {line}
+                </Body>
+              ))}
+            </View>
+            {currentIndex === slides.length - 1 && (
+              <Pressable onPress={finishOnboarding} style={styles.ienaktButton}>
+                <Text style={styles.ienaktText}>Ienākt</Text>
+              </Pressable>
             )}
-            onScroll={Animated.event([{ nativeEvent: { contentOffset: { x: scrollX.current } } }], {
-              useNativeDriver: false,
-            })}
-            scrollEventThrottle={16}
-          />
+          </View>
         </View>
       </View>
     </SafeAreaView>
@@ -180,18 +178,29 @@ const styles = StyleSheet.create({
   mainContainer: {
     flex: 1,
     flexDirection: 'column',
-    marginTop: '40%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: SPACING.md,
   },
   topSection: {
-    height: 350,
+    flex: 1,
+    justifyContent: 'center',
+    maxHeight: '50%',
+    width: '100%',
   },
   bottomSection: {
-    flex: 1,
+    minHeight: 150,
+    marginTop: SPACING.lg,
   },
 
+  // List Content
+  listContent: {
+    alignItems: 'center',
+  },
   // Image Section
   imageSlide: {
-    height: 350,
+    height: '100%',
+    width: width, // Full width of screen
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -200,20 +209,20 @@ const styles = StyleSheet.create({
     height: '100%',
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: SPACING.md,
   },
   image: {
-    width: '60%',
+    width: '100%',
+    maxWidth: 400, // Prevent images from becoming too large
     height: 300,
   },
 
   // Pagination
   paginationFixed: {
     flexDirection: 'row',
-    alignItems: 'center',
     justifyContent: 'center',
-    height: 24,
-    paddingVertical: SPACING.md,
-    backgroundColor: '#fff',
+    alignItems: 'center',
+    marginVertical: SPACING.lg,
   },
   dot: {
     height: 8,
@@ -225,20 +234,15 @@ const styles = StyleSheet.create({
 
   // Text Section
   textSlide: {
-    flex: 1,
     alignItems: 'center',
-    paddingHorizontal: SPACING.md,
+    paddingHorizontal: SPACING.lg,
   },
   textContainerInline: {
     alignItems: 'center',
-    marginBottom: SPACING.sm,
-    paddingHorizontal: SPACING.md,
   },
   lineText: {
-    fontSize: TYPOGRAPHY.md,
-    color: COLORS.text,
-    marginVertical: SPACING.xs,
     textAlign: 'center',
+    marginBottom: SPACING.sm,
   },
 
   // Buttons
