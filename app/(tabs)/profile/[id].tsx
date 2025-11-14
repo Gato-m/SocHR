@@ -2,7 +2,6 @@ import { FontAwesome, Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Header from '../../../Components/Header';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../../globalStyles/theme';
 import { Body, Title } from '../../../globalStyles/typography';
 import { supabase } from '../../../lib/supabase';
@@ -17,7 +16,13 @@ type User = {
   avatar?: string;
 };
 
-type CategoryKey = 'darbnespeja' | 'komandejums' | 'macibas' | 'islaiciga' | 'atvalinajums' | 'cits';
+type CategoryKey =
+  | 'darbnespeja'
+  | 'komandejums'
+  | 'macibas'
+  | 'islaiciga'
+  | 'atvalinajums'
+  | 'cits';
 
 type CategoryMeta = {
   key: CategoryKey;
@@ -182,10 +187,7 @@ export default function ProfileScreen() {
 
         // Fetch category statistics
         try {
-          const {
-            data: categoryRows,
-            error: categoryError,
-          } = await supabase
+          const { data: categoryRows, error: categoryError } = await supabase
             .from('prombutne')
             .select('kategorija')
             .eq('user_id', id as string);
@@ -292,7 +294,6 @@ export default function ProfileScreen() {
 
   return (
     <View style={styles.container}>
-      <Header />
       <ScrollView style={styles.scrollView}>
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
@@ -348,13 +349,7 @@ export default function ProfileScreen() {
           <Title style={styles.sectionTitle}>Prombūtnes statistika</Title>
           <View style={styles.categoryGrid}>
             {CATEGORY_META.map((cat) => (
-              <View
-                key={cat.key}
-                style={[
-                  styles.categoryCard,
-                  { borderLeftColor: cat.color },
-                ]}
-              >
+              <View key={cat.key} style={[styles.categoryCard, { borderLeftColor: cat.color }]}>
                 <Body style={styles.categoryValue}>{categoryStats[cat.key] ?? 0}</Body>
                 <Body style={styles.categoryLabel}>{cat.label}</Body>
               </View>
@@ -388,6 +383,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
+    paddingTop: 30,
   },
   scrollView: {
     flex: 1,

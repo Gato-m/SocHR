@@ -4,8 +4,8 @@ import Soclogo from './soclogo';
 export default function Header() {
   return (
     <View style={styles.logoContainer}>
-    <Soclogo style={styles.soclogo} />
-  </View>
+      <Soclogo style={styles.soclogo} />
+    </View>
   );
 }
 
