@@ -24,6 +24,21 @@ const customFetch: typeof fetch = async (input, init = {}) => {
   const timeout = 15000; // 15 seconds
   const timeoutId = setTimeout(() => controller.abort(), timeout);
 
+  // Safely resolve a URL string from different possible request inputs
+  const resolveRequestUrl = (inp: unknown): string => {
+    if (typeof inp === 'string') return inp;
+    try {
+      // If inp is a URL instance
+      if (typeof URL !== 'undefined' && inp instanceof URL) {
+        return inp.toString();
+      }
+    } catch {}
+    // If inp is a Request-like object with a url string
+    const maybeUrl = (inp as any)?.url;
+    if (typeof maybeUrl === 'string') return maybeUrl;
+    return 'Unknown URL';
+  };
+
   try {
     const response = await fetch(input, {
       ...init,
@@ -37,53 +52,10 @@ const customFetch: typeof fetch = async (input, init = {}) => {
     });
 
     clearTimeout(timeoutId);
-    
-    if (!response.ok) {
-      let errorMessage = `HTTP error! status: ${response.status}`;
-      let errorData: any = {};
-      
-      try {
-        // Try to parse error as JSON first
-        const contentType = response.headers.get('content-type');
-        if (contentType?.includes('application/json')) {
-          errorData = await response.json();
-          errorMessage = errorData.message || errorData.error_description || errorMessage;
-        } else {
-          // If not JSON, try to get text
-          const text = await response.text();
-          if (text) {
-            errorMessage = text;
-            try {
-              // Try to parse as JSON if it's a stringified JSON
-              errorData = JSON.parse(text);
-            } catch {
-              errorData = { message: text };
-            }
-          }
-        }
-      } catch (parseError) {
-        console.warn('Error parsing error response:', parseError);
-      }
-      
-      // Ensure errorMessage is always a string
-      const safeErrorMessage = typeof errorMessage === 'string' ? errorMessage : 'An unknown error occurred';
-      const error = new Error(safeErrorMessage);
-      
-      // Add additional error context
-      (error as any).status = response.status || 500;
-      (error as any).data = errorData || {};
-      (error as any).url = typeof input === 'string' ? input : input?.url || 'Unknown URL';
-      
-      console.error('API Error:', {
-        message: safeErrorMessage,
-        status: response.status,
-        url: (error as any).url,
-        data: errorData
-      });
-      
-      throw error;
-    }
 
+    // Always return the response and let supabase-js/postgrest handle
+    // non-2xx statuses and error parsing. We only throw on true
+    // network-level failures (e.g., timeouts/aborts) below.
     return response;
   } catch (error) {
     if (error instanceof Error) {
@@ -91,7 +63,7 @@ const customFetch: typeof fetch = async (input, init = {}) => {
         throw new Error('Request timed out. Please check your internet connection.');
       }
       console.error('Request failed:', {
-        url: typeof input === 'string' ? input : input.url,
+        url: resolveRequestUrl(input),
         error: error.message,
       });
     }
@@ -102,10 +74,11 @@ const customFetch: typeof fetch = async (input, init = {}) => {
 // Create Supabase client
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
-    storage: AsyncStorage,
+    // Use AsyncStorage on native, default storage (localStorage) on web
+    storage: Platform.OS === 'web' ? undefined : AsyncStorage,
     autoRefreshToken: true,
     persistSession: true,
-    detectSessionInUrl: false,
+    detectSessionInUrl: Platform.OS === 'web' ? true : false,
   },
   global: {
     fetch: customFetch,
