@@ -46,13 +46,14 @@ type CalendarDay = {
 
 export default function AddData() {
   const [authUser, setAuthUser] = useState<{ id: string } | null>(null);
-  const [selectedCategory, setSelectedCategory] = useState<CategoryKey | null>(null);
+  const [selectedCategories, setSelectedCategories] = useState<CategoryKey[]>([]);
+  const [activeCategory, setActiveCategory] = useState<CategoryKey | null>(null);
   const [otherReason, setOtherReason] = useState<string>('');
   const [comment, setComment] = useState<string>('');
   const [showCommentInput, setShowCommentInput] = useState<boolean>(false);
   const [isCallable, setIsCallable] = useState<boolean>(false);
   const [currentMonth, setCurrentMonth] = useState<Date>(truncateToMonth(new Date()));
-  const [selectedDates, setSelectedDates] = useState<string[]>([]); // YYYY-MM-DD
+  const [dateCategoryMap, setDateCategoryMap] = useState<Record<string, CategoryKey>>({}); // ISO -> category
   const [gridSize, setGridSize] = useState<{ width: number; height: number }>({
     width: 0,
     height: 0,
@@ -61,10 +62,29 @@ export default function AddData() {
   const seenWhileDraggingRef = useRef<Set<string>>(new Set());
 
   const days = useMemo(() => buildMonthGrid(currentMonth), [currentMonth]);
-  const categoryMeta = useMemo(
-    () => (selectedCategory ? CATEGORIES.find((c) => c.key === selectedCategory) : null),
-    [selectedCategory]
+  const assignedCategoryMetas = useMemo(() => {
+    const uniqueKeys = Array.from(new Set(Object.values(dateCategoryMap)));
+    return uniqueKeys.map((key) => CATEGORIES.find((c) => c.key === key)!).filter(Boolean);
+  }, [dateCategoryMap]);
+  const anyRequiresReason = useMemo(
+    () => assignedCategoryMetas.some((c) => c.requiresReason),
+    [assignedCategoryMetas]
   );
+
+  const toggleCategory = (key: CategoryKey) => {
+    setSelectedCategories((prev) => {
+      if (prev.includes(key)) {
+        const next = prev.filter((k) => k !== key);
+        if (activeCategory === key) {
+          setActiveCategory(next.length ? next[next.length - 1] : null);
+        }
+        return next;
+      } else {
+        setActiveCategory(key);
+        return [...prev, key];
+      }
+    });
+  };
 
   useEffect(() => {
     // Load authenticated user from Supabase
@@ -83,20 +103,24 @@ export default function AddData() {
       }
     })();
 
-    // Reset reason when switching away from "cits"
-    if (categoryMeta && !categoryMeta.requiresReason) setOtherReason('');
-  }, [categoryMeta]);
+    // Reset reason when none of the selected categories require it
+    if (!anyRequiresReason) setOtherReason('');
+  }, [anyRequiresReason]);
 
   const toggleDate = (date: Date | null) => {
     if (!date) return;
-    if (!selectedCategory) {
+    if (!activeCategory) {
       Alert.alert('Kļūda', 'Lūdzu, vispirms izvēlieties kategoriju');
       return;
     }
     const iso = toISODate(date);
-    setSelectedDates((prev) =>
-      prev.includes(iso) ? prev.filter((d) => d !== iso) : [...prev, iso]
-    );
+    setDateCategoryMap((prev) => {
+      const { [iso]: existing, ...rest } = prev;
+      if (existing) {
+        return rest; // toggle off
+      }
+      return { ...prev, [iso]: activeCategory };
+    });
   };
 
   const onCalendarLayout = (e: LayoutChangeEvent) => {
@@ -115,7 +139,8 @@ export default function AddData() {
   };
 
   const handleCalendarMove = (e: GestureResponderEvent) => {
-    if (!isDraggingRef.current || gridSize.width === 0 || gridSize.height === 0) return;
+    if (!isDraggingRef.current || gridSize.width === 0 || gridSize.height === 0 || !activeCategory)
+      return;
     const { locationX, locationY } = e.nativeEvent;
     // Grid is 7 cols x up to 6 rows
     const col = Math.min(6, Math.max(0, Math.floor((locationX / gridSize.width) * 7)));
@@ -126,7 +151,7 @@ export default function AddData() {
     const iso = toISODate(item.date);
     if (seenWhileDraggingRef.current.has(iso)) return;
     seenWhileDraggingRef.current.add(iso);
-    setSelectedDates((prev) => (prev.includes(iso) ? prev : [...prev, iso]));
+    setDateCategoryMap((prev) => (prev[iso] ? prev : { ...prev, [iso]: activeCategory }));
   };
 
   const submit = async () => {
@@ -134,27 +159,27 @@ export default function AddData() {
       Alert.alert('Kļūda', 'Jābūt autorizētam lietotājam.');
       return;
     }
-    if (!selectedCategory) {
-      Alert.alert('Kļūda', 'Lūdzu, izvēlieties kategoriju.');
-      return;
-    }
-    if (selectedDates.length === 0) {
+    const selectedEntries = Object.entries(dateCategoryMap);
+    if (selectedEntries.length === 0) {
       Alert.alert('Kļūda', 'Lūdzu, izvēlieties vismaz vienu datumu.');
       return;
     }
-    if (categoryMeta?.requiresReason && !otherReason.trim()) {
+    if (assignedCategoryMetas.some((c) => c.requiresReason) && !otherReason.trim()) {
       Alert.alert('Kļūda', 'Lūdzu, ievadiet iemeslu (cits iemesls).');
       return;
     }
 
-    const rows = selectedDates.map((d) => ({
-      user_id: authUser.id,
-      kategorija: selectedCategory,
-      iemesls: categoryMeta?.requiresReason ? otherReason.trim() : null,
-      komentari: comment.trim() || null,
-      datums: d,
-      callable: isCallable,
-    }));
+    const rows = selectedEntries.map(([d, key]) => {
+      const cat = CATEGORIES.find((c) => c.key === key);
+      return {
+        user_id: authUser.id,
+        kategorija: key,
+        iemesls: cat?.requiresReason ? otherReason.trim() : null,
+        komentari: comment.trim() || null,
+        datums: d,
+        callable: isCallable,
+      };
+    });
 
     const { error } = await supabase.from('prombutne').insert(rows);
     if (error) {
@@ -163,10 +188,12 @@ export default function AddData() {
     }
 
     Alert.alert('Gatavs', 'Prombūtnes ieraksti pievienoti.');
-    setSelectedDates([]);
+    setDateCategoryMap({});
+    setSelectedCategories([]);
+    setActiveCategory(null);
     setComment('');
     setIsCallable(false);
-    if (categoryMeta?.requiresReason) setOtherReason('');
+    setOtherReason('');
   };
 
   const goPrevMonth = () => setCurrentMonth(addMonths(currentMonth, -1));
@@ -182,17 +209,13 @@ export default function AddData() {
         showsVerticalScrollIndicator={true}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={styles.sectionHeader}>
-          Izvēlies kategoriju un datumus, atzīmē vai būsi sazvanāms, ja nepieciešams - pievieno īsu
-          komentāru.
-        </Text>
         <View style={styles.tabsRow}>
           {CATEGORIES.map((cat) => (
             <TouchableOpacity
               key={cat.key}
               style={[
                 styles.tabChip,
-                selectedCategory === cat.key
+                selectedCategories.includes(cat.key)
                   ? {
                       ...styles.tabChipActive,
                       backgroundColor: cat.color,
@@ -201,11 +224,14 @@ export default function AddData() {
                     }
                   : { borderLeftColor: cat.color, borderLeftWidth: 6 },
               ]}
-              onPress={() => setSelectedCategory(cat.key)}
+              onPress={() => toggleCategory(cat.key)}
             >
               <View style={styles.categoryContent}>
                 <Text
-                  style={[styles.tabLabel, selectedCategory === cat.key && styles.tabLabelActive]}
+                  style={[
+                    styles.tabLabel,
+                    selectedCategories.includes(cat.key) && styles.tabLabelActive,
+                  ]}
                 >
                   {cat.label}
                 </Text>
@@ -256,7 +282,7 @@ export default function AddData() {
                 (comment || showCommentInput) && styles.commentButtonTextActive,
               ]}
             >
-              Komentāri{comment ? ` (${comment.length}/200)` : ''}
+              Komentāri
             </Text>
           </TouchableOpacity>
         </View>
@@ -308,7 +334,11 @@ export default function AddData() {
         >
           {days.map((d) => {
             const iso = d.date ? toISODate(d.date) : '';
-            const selected = !!d.date && selectedDates.includes(iso);
+            const assignedCategory = iso && dateCategoryMap[iso];
+            const selected = !!d.date && !!assignedCategory;
+            const selectedColor = assignedCategory
+              ? CATEGORIES.find((c) => c.key === assignedCategory)?.color || COLORS.primary
+              : COLORS.primary;
             return (
               <TouchableOpacity
                 key={d.key}
@@ -321,11 +351,8 @@ export default function AddData() {
                     styles.dayInner,
                     // Non-selected actual dates get background lite
                     !selected && d.date && { backgroundColor: COLORS.backgroundLite },
-                    // Selected dates get category color
-                    selected &&
-                      categoryMeta && {
-                        backgroundColor: categoryMeta.color,
-                      },
+                    // Selected dates get assigned category color
+                    selected && { backgroundColor: selectedColor },
                   ]}
                 >
                   <Text
@@ -347,8 +374,9 @@ export default function AddData() {
           <TouchableOpacity
             style={[styles.resetBtn, { backgroundColor: COLORS.slimiba }]}
             onPress={() => {
-              setSelectedCategory(null);
-              setSelectedDates([]);
+              setSelectedCategories([]);
+              setActiveCategory(null);
+              setDateCategoryMap({});
               setComment('');
               setIsCallable(false);
               setOtherReason('');
