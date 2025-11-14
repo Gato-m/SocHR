@@ -1,29 +1,23 @@
 import { StyleSheet, View } from 'react-native';
-import { Title } from '../globalStyles/index';
+import Soclogo from './soclogo';
 
 export default function Header() {
   return (
-    <View style={styles.header}>
-      <Title style={styles.title2}>Personāls</Title>
-    </View>
+    <View style={styles.logoContainer}>
+    <Soclogo style={styles.soclogo} />
+  </View>
   );
 }
 
 const styles = StyleSheet.create({
-  title2: {
+  logoContainer: {
+    paddingVertical: 10,
     justifyContent: 'center',
     alignItems: 'center',
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#333',
+    marginBottom: 4,
   },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-  },
-  titleContainer: {
-    flex: 1,
-    alignItems: 'center',
+  soclogo: {
+    width: 60,
+    height: 60,
   },
 });

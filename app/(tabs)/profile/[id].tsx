@@ -17,20 +17,40 @@ type User = {
   avatar?: string;
 };
 
-type Stats = {
-  totalHours?: number;
-  completedTasks?: number;
-  rating?: number;
+type CategoryKey = 'darbnespeja' | 'komandejums' | 'macibas' | 'islaiciga' | 'atvalinajums' | 'cits';
+
+type CategoryMeta = {
+  key: CategoryKey;
+  label: string;
+  color: string;
 };
+
+type PrombutneCategoryRow = {
+  kategorija: CategoryKey | null;
+};
+
+const CATEGORY_META: CategoryMeta[] = [
+  { key: 'darbnespeja', label: 'Darbnespējas lapa', color: '#e11d48' },
+  { key: 'komandejums', label: 'Komandējums', color: '#0ea5e9' },
+  { key: 'macibas', label: 'Mācības', color: '#a855f7' },
+  { key: 'islaiciga', label: 'Īslaicīga prombūtne', color: '#f59e0b' },
+  { key: 'atvalinajums', label: 'Atvaļinājums', color: '#22c55e' },
+  { key: 'cits', label: 'Cits iemesls', color: '#64748b' },
+];
+
+const INITIAL_CATEGORY_STATS: Record<CategoryKey, number> = CATEGORY_META.reduce(
+  (acc, cat) => {
+    acc[cat.key] = 0;
+    return acc;
+  },
+  {} as Record<CategoryKey, number>
+);
 
 export default function ProfileScreen() {
   const { id } = useLocalSearchParams();
   const [user, setUser] = useState<User | null>(null);
-  const [stats, setStats] = useState<Stats>({
-    totalHours: 0,
-    completedTasks: 0,
-    rating: 0,
-  });
+  const [categoryStats, setCategoryStats] =
+    useState<Record<CategoryKey, number>>(INITIAL_CATEGORY_STATS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ message: string; details?: any } | null>(null);
 
@@ -160,56 +180,31 @@ export default function ProfileScreen() {
           setUser(data);
         }
 
-        // Fetch user statistics
+        // Fetch category statistics
         try {
-          console.log('📊 Fetching user statistics...');
           const {
-            data: statsData,
-            error: statsError,
-            status: statsStatus,
-          } = await supabase.from('user_stats').select('*').eq('user_id', id).maybeSingle();
+            data: categoryRows,
+            error: categoryError,
+          } = await supabase
+            .from('prombutne')
+            .select('kategorija')
+            .eq('user_id', id as string);
 
-          console.log(`📊 User stats fetch status: ${statsStatus}`);
-
-          if (statsError) {
-            const statsErrorDetails = {
-              message: statsError.message,
-              code: statsError.code || 'NO_ERROR_CODE',
-              details: statsError.details || 'No additional details',
-              hint: statsError.hint || 'No hint provided',
-            };
-            console.warn(
-              '⚠️  Error fetching user stats:',
-              JSON.stringify(statsErrorDetails, null, 2)
-            );
-            // Use default stats if stats fetch fails
-            setStats({
-              totalHours: 0,
-              completedTasks: 0,
-              rating: 0,
+          if (categoryError) {
+            console.warn('⚠️ Error fetching category stats:', categoryError);
+            setCategoryStats(INITIAL_CATEGORY_STATS);
+          } else if (categoryRows) {
+            const counts = { ...INITIAL_CATEGORY_STATS };
+            (categoryRows as PrombutneCategoryRow[]).forEach((row) => {
+              if (row?.kategorija && counts[row.kategorija] !== undefined) {
+                counts[row.kategorija] += 1;
+              }
             });
-          } else if (statsData) {
-            console.log('✅ Fetched user stats:', statsData);
-            setStats({
-              totalHours: statsData.total_hours || 0,
-              completedTasks: statsData.completed_tasks || 0,
-              rating: statsData.rating || 0,
-            });
-          } else {
-            console.log('ℹ️  No stats data available for user');
-            setStats({
-              totalHours: 0,
-              completedTasks: 0,
-              rating: 0,
-            });
+            setCategoryStats(counts);
           }
-        } catch (statsError) {
-          console.warn('Failed to load user stats:', statsError);
-          setStats({
-            totalHours: 0,
-            completedTasks: 0,
-            rating: 0,
-          });
+        } catch (categoryStatsError) {
+          console.warn('Failed to load category stats:', categoryStatsError);
+          setCategoryStats(INITIAL_CATEGORY_STATS);
         }
       } catch (error) {
         if (!isMounted) return;
@@ -351,19 +346,19 @@ export default function ProfileScreen() {
 
         <View style={styles.statsContainer}>
           <Title style={styles.sectionTitle}>Prombūtnes statistika</Title>
-          <View style={styles.statsGrid}>
-            <View style={styles.statCard}>
-              <Body style={styles.statValue}>{stats.totalHours}</Body>
-              <Body style={styles.statLabel}>Total Hours</Body>
-            </View>
-            <View style={styles.statCard}>
-              <Body style={styles.statValue}>{stats.completedTasks}</Body>
-              <Body style={styles.statLabel}>Tasks Done</Body>
-            </View>
-            <View style={styles.statCard}>
-              <Body style={styles.statValue}>{stats.rating || 'N/A'}</Body>
-              <Body style={styles.statLabel}>Rating</Body>
-            </View>
+          <View style={styles.categoryGrid}>
+            {CATEGORY_META.map((cat) => (
+              <View
+                key={cat.key}
+                style={[
+                  styles.categoryCard,
+                  { borderLeftColor: cat.color },
+                ]}
+              >
+                <Body style={styles.categoryValue}>{categoryStats[cat.key] ?? 0}</Body>
+                <Body style={styles.categoryLabel}>{cat.label}</Body>
+              </View>
+            ))}
           </View>
         </View>
 
@@ -404,20 +399,18 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
   },
   profileHeader: {
+    flexDirection: 'row',
     alignItems: 'center',
-    padding: SPACING.lg,
-    borderBottomWidth: 1,
-    borderBottomColor: COLORS.borderColorGray,
+    paddingHorizontal: SPACING.lg,
+    gap: SPACING.lg,
   },
   avatarContainer: {
-    marginBottom: SPACING.md,
+    marginBottom: 0,
   },
   avatar: {
-    marginTop: -8,
-    width: 140,
-    height: 140,
-    borderRadius: 30,
-    marginBottom: 3,
+    width: 100,
+    height: 100,
+    borderRadius: 24,
     backgroundColor: COLORS.backgroundLite,
   },
   avatarPlaceholder: {
@@ -426,10 +419,11 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.gray,
   },
   userInfo: {
-    alignItems: 'center',
+    flex: 1,
+    alignItems: 'flex-start',
   },
   name: {
-    fontSize: TYPOGRAPHY.lg,
+    fontSize: TYPOGRAPHY.xl,
     fontWeight: 'bold',
     marginBottom: SPACING.xs,
     color: COLORS.text,
@@ -453,33 +447,31 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: TYPOGRAPHY.lg,
     fontWeight: 'bold',
-    marginBottom: SPACING.md,
     color: COLORS.text,
   },
-  statsGrid: {
+  categoryGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    marginTop: SPACING.lg,
   },
-  statCard: {
+  categoryCard: {
     width: '48%',
     backgroundColor: COLORS.backgroundLite,
     borderRadius: 8,
     padding: SPACING.md,
     marginBottom: SPACING.md,
-    alignItems: 'center',
+    alignItems: 'flex-start',
     borderLeftWidth: 6,
-    borderLeftColor: COLORS.primary,
   },
-  statValue: {
-    fontSize: TYPOGRAPHY.xl,
+  categoryValue: {
+    fontSize: TYPOGRAPHY.lg,
     fontWeight: 'bold',
-    color: COLORS.primary,
+    color: COLORS.text,
     marginBottom: SPACING.xs,
   },
-  statLabel: {
+  categoryLabel: {
     fontSize: TYPOGRAPHY.sm,
     color: COLORS.gray,
-    textAlign: 'center',
   },
 });
