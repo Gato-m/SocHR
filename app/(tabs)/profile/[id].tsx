@@ -1,7 +1,17 @@
 import { FontAwesome, Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams } from 'expo-router';
-import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  Animated,
+  Dimensions,
+  Image,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
+} from 'react-native';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../../globalStyles/theme';
 import { Body, Title } from '../../../globalStyles/typography';
 import { supabase } from '../../../lib/supabase';
@@ -51,13 +61,40 @@ const INITIAL_CATEGORY_STATS: Record<CategoryKey, number> = CATEGORY_META.reduce
   {} as Record<CategoryKey, number>
 );
 
+const { height: SCREEN_HEIGHT } = Dimensions.get('window');
+
 export default function ProfileScreen() {
+  const router = useRouter();
+  const translateY = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
   const { id } = useLocalSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [categoryStats, setCategoryStats] =
     useState<Record<CategoryKey, number>>(INITIAL_CATEGORY_STATS);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<{ message: string; details?: any } | null>(null);
+
+  // Animation effect - moved to the top
+  useEffect(() => {
+    if (!loading && !error && user) {
+      Animated.spring(translateY, {
+        toValue: 0,
+        useNativeDriver: true,
+        tension: 50,
+        friction: 10,
+      }).start();
+    }
+  }, [loading, error, user, translateY]);
+
+  // Handle close function - defined here to maintain hook order
+  const handleClose = useCallback(() => {
+    Animated.timing(translateY, {
+      toValue: SCREEN_HEIGHT,
+      duration: 300,
+      useNativeDriver: true,
+    }).start(() => {
+      router.back();
+    });
+  }, [router, translateY]);
 
   // Handle missing ID in the render method instead of early return
   // to maintain hook call order
@@ -290,80 +327,128 @@ export default function ProfileScreen() {
     );
   }
 
-  const avatarUrl = getAvatarUrl(user.avatar);
+  const avatarUrl = user ? getAvatarUrl(user.avatar) : null;
 
   return (
-    <View style={styles.container}>
-      <ScrollView style={styles.scrollView}>
-        <View style={styles.profileHeader}>
-          <View style={styles.avatarContainer}>
-            {avatarUrl ? (
-              <Image
-                source={{ uri: avatarUrl }}
-                style={styles.avatar}
-                resizeMode="cover"
-                onError={({ nativeEvent }) => {
-                  console.log('Error loading avatar:', nativeEvent.error);
-                }}
-              />
-            ) : (
-              <View style={[styles.avatar, styles.avatarPlaceholder]}>
-                <Ionicons name="person" size={48} color={COLORS.white} style={{ opacity: 0.7 }} />
+    <View style={styles.modalContainer}>
+      <TouchableOpacity style={styles.backdrop} activeOpacity={1} onPress={handleClose} />
+      <Animated.View style={[styles.modalContent, { transform: [{ translateY }] }]}>
+        <View style={styles.handle} />
+        <TouchableOpacity style={styles.closeButton} onPress={handleClose}>
+          <Ionicons name="close" size={24} color={COLORS.text} />
+        </TouchableOpacity>
+        <View style={{ flex: 1, width: '100%' }}>
+          <ScrollView
+            style={styles.scrollView}
+            contentContainerStyle={styles.scrollViewContent}
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.profileHeader}>
+              <View style={styles.avatarContainer}>
+                {avatarUrl ? (
+                  <Image
+                    source={{ uri: avatarUrl }}
+                    style={styles.avatar}
+                    resizeMode="cover"
+                    onError={({ nativeEvent }) => {
+                      console.log('Error loading avatar:', nativeEvent.error);
+                    }}
+                  />
+                ) : (
+                  <View style={[styles.avatar, styles.avatarPlaceholder]}>
+                    <Ionicons
+                      name="person"
+                      size={48}
+                      color={COLORS.white}
+                      style={{ opacity: 0.7 }}
+                    />
+                  </View>
+                )}
               </View>
-            )}
-          </View>
 
-          <View style={styles.userInfo}>
-            <Body style={styles.name} numberOfLines={1}>
-              {user.name || 'No Name'}
-            </Body>
-            {user.position && (
-              <Body variant="secondary" style={styles.position} numberOfLines={1}>
-                {user.position}
-              </Body>
-            )}
-            <Body variant="secondary" style={styles.userDetail} numberOfLines={1}>
-              <FontAwesome
-                name="envelope"
-                size={16}
-                color={COLORS.primary}
-                style={styles.smallIcon}
-              />{' '}
-              {user.email || 'No email'}
-            </Body>
-            {user.phone && (
-              <Body variant="secondary" style={styles.userDetail} numberOfLines={1}>
-                <FontAwesome
-                  name="phone"
-                  size={16}
-                  color={COLORS.primary}
-                  style={styles.smallIcon}
-                />{' '}
-                {user.phone}
-              </Body>
-            )}
-          </View>
-        </View>
-
-        <View style={styles.statsContainer}>
-          <Title style={styles.sectionTitle}>Prombūtnes statistika</Title>
-          <View style={styles.categoryGrid}>
-            {CATEGORY_META.map((cat) => (
-              <View key={cat.key} style={[styles.categoryCard, { borderLeftColor: cat.color }]}>
-                <Body style={styles.categoryValue}>{categoryStats[cat.key] ?? 0}</Body>
-                <Body style={styles.categoryLabel}>{cat.label}</Body>
+              <View style={styles.userInfo}>
+                <Body style={styles.name} numberOfLines={1}>
+                  {user.name || 'No Name'}
+                </Body>
+                {user.position && (
+                  <Body variant="secondary" style={styles.position} numberOfLines={1}>
+                    {user.position}
+                  </Body>
+                )}
+                <Body variant="secondary" style={styles.userDetail} numberOfLines={1}>
+                  <FontAwesome
+                    name="envelope"
+                    size={16}
+                    color={COLORS.primary}
+                    style={styles.smallIcon}
+                  />{' '}
+                  {user.email || 'No email'}
+                </Body>
+                {user.phone && (
+                  <Body variant="secondary" style={styles.userDetail} numberOfLines={1}>
+                    <FontAwesome
+                      name="phone"
+                      size={16}
+                      color={COLORS.primary}
+                      style={styles.smallIcon}
+                    />{' '}
+                    {user.phone}
+                  </Body>
+                )}
               </View>
-            ))}
-          </View>
-        </View>
+            </View>
 
-        {/* Add more sections here as needed */}
-      </ScrollView>
+            <View style={styles.statsContainer}>
+              <Title style={styles.sectionTitle}>Prombūtnes statistika</Title>
+              <View style={styles.categoryGrid}>
+                {CATEGORY_META.map((cat) => (
+                  <View key={cat.key} style={[styles.categoryCard, { borderLeftColor: cat.color }]}>
+                    <Body style={styles.categoryValue}>{categoryStats[cat.key] ?? 0}</Body>
+                    <Body style={styles.categoryLabel}>{cat.label}</Body>
+                  </View>
+                ))}
+              </View>
+            </View>
+          </ScrollView>
+        </View>
+      </Animated.View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  modalContainer: {
+    flex: 1,
+    justifyContent: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'transparent',
+  },
+  modalContent: {
+    backgroundColor: COLORS.background,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    maxHeight: '90%',
+    width: '100%',
+  },
+  handle: {
+    width: 40,
+    height: 5,
+    backgroundColor: COLORS.borderColorGray,
+    borderRadius: 3,
+    alignSelf: 'center',
+    marginBottom: 15,
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 15,
+    right: 15,
+    zIndex: 10,
+    padding: 5,
+  },
   errorText: {
     color: 'red',
     fontSize: TYPOGRAPHY.md,
@@ -383,10 +468,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: COLORS.background,
-    paddingTop: 30,
+  },
+  scrollViewContent: {
+    paddingBottom: 40,
+    paddingHorizontal: SPACING.lg,
+    paddingTop: 10,
+    flexGrow: 1,
   },
   scrollView: {
     flex: 1,
+    width: '100%',
   },
   loadingContainer: {
     flex: 1,

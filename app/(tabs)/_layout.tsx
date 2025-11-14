@@ -1,24 +1,40 @@
 import { FontAwesome } from '@expo/vector-icons';
 import { Tabs } from 'expo-router';
+import { View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Header from '../../Components/Header';
 import { COLORS } from '../../globalStyles/theme';
 
 export default function TabsLayout() {
   return (
-    <SafeAreaView style={{ flex: 1 }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: COLORS.background }}>
       <Header />
       <Tabs
         screenOptions={{
           headerShown: false,
-          headerStyle: {
-            backgroundColor: COLORS.background,
-          },
-          tabBarActiveTintColor: '#007AFF',
+          tabBarActiveTintColor: '#ee4023',
           tabBarInactiveTintColor: 'gray',
           tabBarStyle: {
-            paddingTop: 5,
+            paddingTop: 10,
+            paddingBottom: 0,
+            height: 60,
+            backgroundColor: COLORS.background,
+            borderTopWidth: 1,
+            borderTopColor: COLORS.borderColorGray,
+            elevation: 0,
+            shadowOpacity: 0,
           },
+          tabBarBackground: () => (
+            <View
+              style={{
+                flex: 1,
+                backgroundColor: COLORS.background,
+                borderTopWidth: 0,
+                elevation: 0,
+                shadowOpacity: 0,
+              }}
+            />
+          ),
         }}
       >
         <Tabs.Screen
